@@ -28,6 +28,17 @@ if [[ -n "$VOLID" ]]; then
   if [[ "$VOLID" =~ [[:space:]] ]]; then fail "volid must not contain spaces"; fi
 fi
 
+KBD="$(yaml_get keyboard_layouts)"
+if [[ -n "$KBD" ]]; then
+  IFS=',' read -ra LAYOUTS <<< "$KBD"
+  for l in "${LAYOUTS[@]}"; do
+    l="${l// /}"
+    if [[ -n "$l" && ! "$l" =~ ^[a-z]{2,8}$ ]]; then
+      fail "keyboard_layouts: '$l' does not look like an xkb layout code (e.g. us, mm, de)"
+    fi
+  done
+fi
+
 URL="$(yaml_get base_iso_url)"
 if [[ "$ONLINE" == true && -n "$URL" ]]; then
   if curl -fsIL --max-time 60 -o /dev/null "$URL"; then

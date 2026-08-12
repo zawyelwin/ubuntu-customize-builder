@@ -3,5 +3,5 @@ distro_name: "My Custom Ubuntu"
 volid: "MYCUSTOM"             # max 32 chars, no spaces, used in xorriso -V and .disk/info
 base_iso_url: "https://releases.ubuntu.com/24.04/ubuntu-24.04.4-desktop-amd64.iso"
 default_lang: "en"
-default_keyboard: "us"
+keyboard_layouts: "us"        # comma-separated xkb layouts, first is the default
 output_name: "custom.iso"

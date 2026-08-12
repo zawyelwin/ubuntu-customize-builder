@@ -4,6 +4,11 @@ require_root
 
 banner "Applying branding"
 
+OVERRIDE_DIR="$CHROOT_DIR/usr/share/glib-2.0/schemas"
+OVERRIDE_FILE="$OVERRIDE_DIR/99_livecd-builder.gschema.override"
+mkdir -p "$OVERRIDE_DIR"
+: > "$OVERRIDE_FILE"
+
 WALLPAPER=$(find "$ROOT_DIR/assets/wallpapers" -maxdepth 1 -type f ! -name '.*' | sort | head -1 || true)
 if [[ -n "$WALLPAPER" ]]; then
   EXT="${WALLPAPER##*.}"
@@ -12,17 +17,41 @@ if [[ -n "$WALLPAPER" ]]; then
   cp "$WALLPAPER" "$CHROOT_DIR/usr/share/backgrounds/$DEST_NAME"
   log "copied $(basename "$WALLPAPER") -> /usr/share/backgrounds/$DEST_NAME"
 
-  OVERRIDE_DIR="$CHROOT_DIR/usr/share/glib-2.0/schemas"
-  mkdir -p "$OVERRIDE_DIR"
-  cat > "$OVERRIDE_DIR/99_livecd-builder.gschema.override" <<EOF
+  cat >> "$OVERRIDE_FILE" <<EOF
 [org.gnome.desktop.background]
 picture-uri='file:///usr/share/backgrounds/${DEST_NAME}'
 picture-uri-dark='file:///usr/share/backgrounds/${DEST_NAME}'
+
 EOF
+else
+  warn "no wallpaper found in assets/wallpapers, skipping wallpaper"
+fi
+
+KBD_LAYOUTS="$(yaml_get keyboard_layouts)"
+if [[ -n "$KBD_LAYOUTS" ]]; then
+  SOURCES=""
+  IFS=',' read -ra LAYOUTS <<< "$KBD_LAYOUTS"
+  for l in "${LAYOUTS[@]}"; do
+    l="${l// /}"
+    if [[ -n "$l" ]]; then
+      SOURCES+="${SOURCES:+, }('xkb', '$l')"
+    fi
+  done
+  if [[ -n "$SOURCES" ]]; then
+    cat >> "$OVERRIDE_FILE" <<EOF
+[org.gnome.desktop.input-sources]
+sources=[${SOURCES}]
+
+EOF
+    log "keyboard layouts: $KBD_LAYOUTS"
+  fi
+fi
+
+if [[ -s "$OVERRIDE_FILE" ]]; then
   chroot "$CHROOT_DIR" /bin/bash -c "glib-compile-schemas /usr/share/glib-2.0/schemas" \
     || warn "glib-compile-schemas failed — check gnome schemas exist in the base image"
 else
-  warn "no wallpaper found in assets/wallpapers, skipping wallpaper"
+  rm -f "$OVERRIDE_FILE"
 fi
 
 PLYMOUTH_SRC=$(find "$ROOT_DIR/assets/plymouth" -maxdepth 1 -type f -iname '*.png' | sort | head -1 || true)

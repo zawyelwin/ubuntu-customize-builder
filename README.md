@@ -21,11 +21,15 @@ expire after 14 days, and first-time contributors need a maintainer to
 approve the workflow run. Pushes to `main` and manual dispatch from the
 Actions tab build the ISO too.
 
+For a complete worked example — branding, wallpapers, grub/plymouth images,
+extra keyboard layout, and package selection — see the
+[`feat/ubuntu-bagan-version`](../../tree/feat/ubuntu-bagan-version) branch.
+
 ## Folder map
 
 | Path | Purpose |
 |---|---|
-| `branding.yaml` | distro name, volid, locale, base ISO url, output name |
+| `branding.yaml` | distro name, volid, locale, keyboard layouts, base ISO url, output name |
 | `assets/wallpapers/` | desktop background images (first file = default) |
 | `assets/grub-theme/` | grub menu background png + optional `grub_font.pf2` |
 | `assets/plymouth/` | boot splash logo png (plymouth watermark) |

@@ -1,2 +1,1 @@
 # one package name per line, comments start with #
-libreoffice-common
