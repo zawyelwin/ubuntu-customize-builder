@@ -1,0 +1,62 @@
+name: PR build comment
+
+on:
+  workflow_run:
+    workflows: ["Build custom ISO"]
+    types: [completed]
+
+permissions:
+  pull-requests: write
+  actions: read
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const { data: { artifacts } } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: run.id,
+              per_page: 100,
+            });
+
+            const marker = artifacts.find(a => /^pr-\d+$/.test(a.name));
+            if (!marker) {
+              core.info("no PR marker artifact found, skipping comment");
+              return;
+            }
+            const prNumber = Number(marker.name.slice(3));
+            const sha = run.head_sha.slice(0, 7);
+            const iso = artifacts.find(a => a.name === "custom-iso");
+
+            let body;
+            if (run.conclusion === "success" && iso) {
+              const sizeMB = Math.round(iso.size_in_bytes / (1024 * 1024));
+              const dl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${run.id}/artifacts/${iso.id}`;
+              body = [
+                `### :white_check_mark: ISO build succeeded for \`${sha}\``,
+                "",
+                `**[Download custom-iso](${dl})** (~${sizeMB} MB zipped, expires in 14 days)`,
+                "",
+                "You must be signed in to GitHub to download the artifact.",
+                `[Build log](${run.html_url})`,
+              ].join("\n");
+            } else {
+              body = [
+                `### :x: ISO build failed for \`${sha}\``,
+                "",
+                `See the [build log](${run.html_url}) for details.`,
+              ].join("\n");
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body,
+            });

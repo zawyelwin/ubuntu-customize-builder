@@ -1,0 +1,104 @@
+name: Build custom ISO
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "assets/**"
+      - "config/**"
+      - "branding.yaml"
+      - "scripts/**"
+      - "build.sh"
+  pull_request:
+    paths:
+      - "assets/**"
+      - "config/**"
+      - "branding.yaml"
+      - "scripts/**"
+      - "build.sh"
+  workflow_dispatch:
+    inputs:
+      base_iso_url:
+        description: "Override base ISO URL (defaults to branding.yaml)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record PR number
+        if: github.event_name == 'pull_request'
+        run: echo "${{ github.event.pull_request.number }}" > pr-number.txt
+
+      - name: Upload PR marker
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-${{ github.event.pull_request.number }}
+          path: pr-number.txt
+          retention-days: 1
+
+      - name: Lint scripts
+        run: shellcheck -x -S warning build.sh scripts/*.sh scripts/lib/common.sh
+
+      - name: Validate config and assets
+        run: |
+          sudo apt-get update
+          ./scripts/validate.sh --online
+
+  build:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android \
+            /usr/local/.ghcup /opt/hostedtoolcache
+          sudo docker image prune --all --force || true
+          df -h
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y squashfs-tools xorriso rsync imagemagick
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | \
+            sudo tee /etc/apt/sources.list.d/charm.list
+          sudo apt-get update
+          sudo apt-get install -y gum
+
+      - name: Resolve base ISO URL
+        id: cfg
+        run: |
+          URL="${{ github.event.inputs.base_iso_url }}"
+          if [[ -z "$URL" ]]; then
+            URL=$(grep -E '^base_iso_url:' branding.yaml | sed -E 's/^[^:]+:[[:space:]]*//; s/^"(.*)"$/\1/')
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Download base ISO
+        run: curl -fL --retry 3 -o base.iso "${{ steps.cfg.outputs.url }}"
+
+      - name: Run build pipeline
+        run: sudo env WORK_DIR=/mnt/livecd-build ./build.sh --iso base.iso --out custom.iso --yes
+
+      - name: Upload built ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-iso
+          path: custom.iso
+          retention-days: 14
