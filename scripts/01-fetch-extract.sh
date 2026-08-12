@@ -19,7 +19,15 @@ umount "$WORK_DIR/mnt"
 GRUB_CFG="$EXTRACT_DIR/boot/grub/grub.cfg"
 LAYER_TOP=""
 if [[ -f "$GRUB_CFG" ]]; then
-  LAYER_TOP=$(grep -oE 'layerfs-path=[^ ]+' "$GRUB_CFG" | head -1 | cut -d= -f2 || true)
+  LAYER_TOP=$(grep -oE 'layerfs-path=[^[:space:]]+' "$GRUB_CFG" | head -1 | cut -d= -f2 || true)
+fi
+
+if [[ -z "$LAYER_TOP" ]]; then
+  # Newer ISOs omit layerfs-path from grub.cfg (casper auto-detects the
+  # chain). The default live chain tops out at the shortest *.live.squashfs;
+  # the remaining squashfs files are per-language layers.
+  LAYER_TOP=$(find "$EXTRACT_DIR" -maxdepth 2 -name '*.live.squashfs' -exec basename {} \; \
+    | awk '{ print length, $0 }' | sort -n | head -1 | cut -d' ' -f2- || true)
 fi
 
 if [[ -n "$LAYER_TOP" ]]; then
@@ -61,14 +69,12 @@ if [[ -n "$LAYER_TOP" ]]; then
   umount "$MERGED"
   for mp in "${MOUNTS[@]}"; do umount "$mp"; done
 
-  printf '%s\n' "${CHAIN[@]}" > "$WORK_DIR/layers.rel"
   echo "${LIVE_DIR#"$EXTRACT_DIR"/}" > "$WORK_DIR/live.dir"
 else
   mapfile -t SQUASHES < <(find "$EXTRACT_DIR" -maxdepth 2 -name '*.squashfs' | sort)
   [[ ${#SQUASHES[@]} -eq 1 ]] || \
-    die "unsupported ISO layout (found ${#SQUASHES[@]} squashfs files and no layerfs boot chain)"
+    die "unsupported ISO layout (found ${#SQUASHES[@]} squashfs files, no *.live.squashfs chain)"
   SQUASHFS_PATH="${SQUASHES[0]}"
-  basename "$SQUASHFS_PATH" > "$WORK_DIR/layers.rel"
   dirname "${SQUASHFS_PATH#"$EXTRACT_DIR"/}" > "$WORK_DIR/live.dir"
   spin "unsquashfs filesystem (this takes a while)" -- unsquashfs -f -d "$CHROOT_DIR" "$SQUASHFS_PATH"
 fi

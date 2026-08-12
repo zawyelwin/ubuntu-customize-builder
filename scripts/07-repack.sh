@@ -5,12 +5,9 @@ require_root
 banner "Repacking squashfs"
 
 LIVE_DIR="$EXTRACT_DIR/$(cat "$WORK_DIR/live.dir")"
-mapfile -t OLD_LAYERS < "$WORK_DIR/layers.rel"
 
-for layer in "${OLD_LAYERS[@]}"; do
-  base="${layer%.squashfs}"
-  rm -f "$LIVE_DIR/$layer" "$LIVE_DIR/$base.manifest" "$LIVE_DIR/$base.size"
-done
+find "$LIVE_DIR" -maxdepth 1 \( -name '*.squashfs' -o -name '*.squashfs.gpg' \
+  -o -name '*.manifest' -o -name '*.size' \) -delete
 
 chroot "$CHROOT_DIR" dpkg-query -W --showformat='${Package}\t${Version}\n' > "$LIVE_DIR/filesystem.manifest"
 log "regenerated filesystem.manifest ($(wc -l < "$LIVE_DIR/filesystem.manifest") packages)"
@@ -20,6 +17,7 @@ spin "mksquashfs (this takes a while)" -- \
 
 SIZE_BYTES=$(du -sx --block-size=1 "$CHROOT_DIR" | cut -f1)
 echo "$SIZE_BYTES" > "$LIVE_DIR/filesystem.size"
+log "filesystem.size = ${SIZE_BYTES} bytes"
 
 if [[ -f "$LIVE_DIR/install-sources.yaml" ]]; then
   DISTRO_NAME="$(yaml_get distro_name)"
