@@ -32,18 +32,23 @@ jobs:
             }
             const prNumber = Number(marker.name.slice(3));
             const sha = run.head_sha.slice(0, 7);
-            const iso = artifacts.find(a => a.name === "custom-iso");
+            const isos = artifacts.filter(a => a.name.startsWith("custom-iso"));
 
             let body;
-            if (run.conclusion === "success" && iso) {
-              const sizeMB = Math.round(iso.size_in_bytes / (1024 * 1024));
-              const dl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${run.id}/artifacts/${iso.id}`;
+            if (run.conclusion === "success" && isos.length > 0) {
+              const lines = isos.map(a => {
+                const sizeMB = Math.round(a.size_in_bytes / (1024 * 1024));
+                const dl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${run.id}/artifacts/${a.id}`;
+                return `- **[${a.name}](${dl})** — ~${sizeMB} MB zipped`;
+              });
               body = [
                 `### :white_check_mark: ISO build succeeded for \`${sha}\``,
                 "",
-                `**[Download custom-iso](${dl})** (~${sizeMB} MB zipped, expires in 14 days)`,
+                ...lines,
                 "",
-                "You must be signed in to GitHub to download the artifact.",
+                "Unzip the artifact to get the .iso. You must be signed in to GitHub",
+                "to download; artifacts expire in 14 days. Use the arm64 image for",
+                "Apple Silicon VMs (VMware Fusion, UTM, Parallels).",
                 `[Build log](${run.html_url})`,
               ].join("\n");
             } else {

@@ -45,6 +45,27 @@ fi
 if [[ -n "$INITRD" && -f "$LIVE_DIR/initrd" ]]; then
   cp "$INITRD" "$LIVE_DIR/initrd"
   log "synced $(basename "$INITRD") -> $(basename "$LIVE_DIR")/initrd"
+
+  # A regenerated initrd carries a new casper uuid; .disk/casper-uuid-* on
+  # the medium must match or casper rejects the live filesystem at boot.
+  if command -v unmkinitramfs >/dev/null 2>&1 && [[ -d "$EXTRACT_DIR/.disk" ]]; then
+    UUID_TMP="$WORK_DIR/initrd-uuid"
+    rm -rf "$UUID_TMP"
+    mkdir -p "$UUID_TMP"
+    if unmkinitramfs "$INITRD" "$UUID_TMP" 2>/dev/null; then
+      UUID_CONF=$(find "$UUID_TMP" -name uuid.conf | head -1)
+      if [[ -n "$UUID_CONF" ]]; then
+        rm -f "$EXTRACT_DIR/.disk/casper-uuid-"*
+        cp "$UUID_CONF" "$EXTRACT_DIR/.disk/casper-uuid-generic"
+        log "refreshed .disk/casper-uuid-generic from the regenerated initrd"
+      fi
+    else
+      warn "could not unpack initrd to refresh the casper uuid — live boot may fail"
+    fi
+    rm -rf "$UUID_TMP"
+  else
+    warn "unmkinitramfs unavailable — casper uuid not refreshed, live boot may fail"
+  fi
 fi
 
 for cfg in "$EXTRACT_DIR/boot/grub/grub.cfg" "$EXTRACT_DIR/boot/grub/loopback.cfg"; do

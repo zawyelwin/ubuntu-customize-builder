@@ -12,14 +12,18 @@ assets, builds the ISO, and comments the download link on the PR.
 3. Open a pull request.
 4. The **validate** job checks your config, images, and package lists and
    fails fast with clear errors.
-5. The **build** job produces the ISO (~60–90 min) and uploads it as a
-   workflow artifact.
-6. A bot comment appears on the PR with the download link.
+5. The **build** jobs produce the ISO for each configured architecture
+   (~60–90 min) and upload them as workflow artifacts — `custom-iso-amd64`
+   for x86 machines, `custom-iso-arm64` for Apple Silicon VMs (VMware
+   Fusion, UTM, Parallels). Leave `base_iso_url_arm64` empty in
+   `branding.yaml` to skip the arm64 build.
+6. A bot comment appears on the PR with the download links. Unzip the
+   downloaded artifact to get the `.iso`.
 
 Notes: you must be signed in to GitHub to download artifacts, artifacts
 expire after 14 days, and first-time contributors need a maintainer to
-approve the workflow run. Pushes to `main` and manual dispatch from the
-Actions tab build the ISO too.
+approve the workflow run. Builds run on pull requests and manual dispatch
+from the Actions tab — pushes to `main` do not trigger a build.
 
 For a complete worked example — branding, wallpapers, grub/plymouth images,
 extra keyboard layout, and package selection — see the

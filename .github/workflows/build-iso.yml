@@ -1,14 +1,6 @@
 name: Build custom ISO
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "assets/**"
-      - "config/**"
-      - "branding.yaml"
-      - "scripts/**"
-      - "build.sh"
   pull_request:
     paths:
       - "assets/**"
@@ -17,11 +9,6 @@ on:
       - "scripts/**"
       - "build.sh"
   workflow_dispatch:
-    inputs:
-      base_iso_url:
-        description: "Override base ISO URL (defaults to branding.yaml)"
-        required: false
-        default: ""
 
 permissions:
   contents: read
@@ -56,9 +43,35 @@ jobs:
           sudo apt-get update
           ./scripts/validate.sh --online
 
-  build:
-    needs: validate
+  plan:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build arch matrix from branding.yaml
+        id: matrix
+        run: |
+          get() {
+            grep -E "^$1:" branding.yaml | head -1 \
+              | sed -E 's/^[^:]+:[[:space:]]*//; s/^"([^"]*)".*$/\1/; s/[[:space:]]*#.*$//; s/[[:space:]]+$//' || true
+          }
+          AMD64_URL=$(get base_iso_url)
+          ARM64_URL=$(get base_iso_url_arm64)
+          MATRIX='{"include":[{"arch":"amd64","runner":"ubuntu-latest","url":"'"$AMD64_URL"'"}'
+          if [[ -n "$ARM64_URL" ]]; then
+            MATRIX+=',{"arch":"arm64","runner":"ubuntu-24.04-arm","url":"'"$ARM64_URL"'"}'
+          fi
+          MATRIX+=']}'
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: [validate, plan]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
@@ -81,24 +94,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gum
 
-      - name: Resolve base ISO URL
-        id: cfg
-        run: |
-          URL="${{ github.event.inputs.base_iso_url }}"
-          if [[ -z "$URL" ]]; then
-            URL=$(grep -E '^base_iso_url:' branding.yaml | sed -E 's/^[^:]+:[[:space:]]*//; s/^"(.*)"$/\1/')
-          fi
-          echo "url=$URL" >> "$GITHUB_OUTPUT"
-
       - name: Download base ISO
-        run: curl -fL --retry 3 -o base.iso "${{ steps.cfg.outputs.url }}"
+        run: curl -fL --retry 3 -o base.iso "${{ matrix.url }}"
 
       - name: Run build pipeline
-        run: sudo env WORK_DIR=/mnt/livecd-build ./build.sh --iso base.iso --out custom.iso --yes
+        run: |
+          WORK_DIR=/mnt/livecd-build
+          AVAIL=$(df --output=avail -BG /mnt 2>/dev/null | tail -1 | tr -dc '0-9')
+          if [[ "${AVAIL:-0}" -lt 25 ]]; then
+            WORK_DIR="$RUNNER_TEMP/livecd-build"
+          fi
+          sudo env WORK_DIR="$WORK_DIR" ./build.sh --iso base.iso --out custom.iso --yes
 
       - name: Upload built ISO
         uses: actions/upload-artifact@v4
         with:
-          name: custom-iso
+          name: custom-iso-${{ matrix.arch }}
           path: custom.iso
           retention-days: 14

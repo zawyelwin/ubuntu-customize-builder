@@ -48,6 +48,15 @@ if [[ "$ONLINE" == true && -n "$URL" ]]; then
   fi
 fi
 
+URL_ARM64="$(yaml_get base_iso_url_arm64)"
+if [[ "$ONLINE" == true && -n "$URL_ARM64" ]]; then
+  if curl -fsIL --max-time 60 -o /dev/null "$URL_ARM64"; then
+    log "base_iso_url_arm64 is reachable"
+  else
+    fail "base_iso_url_arm64 is not reachable: $URL_ARM64"
+  fi
+fi
+
 banner "Validating wallpapers"
 WALLS=()
 while IFS= read -r f; do WALLS+=("$f"); done < <(find "$ROOT_DIR/assets/wallpapers" -maxdepth 1 -type f ! -name '.*' | sort)
