@@ -66,8 +66,6 @@ if [[ -n "$PLYMOUTH_SRC" ]]; then
       cp "$PLYMOUTH_SRC" "$SPINNER_DIR/watermark.png"
       log "copied $(basename "$PLYMOUTH_SRC") -> plymouth watermark"
     fi
-    spin "update-initramfs (this takes a while)" -- \
-      chroot "$CHROOT_DIR" /bin/bash -c "export DEBIAN_FRONTEND=noninteractive; update-initramfs -u"
   else
     warn "plymouth spinner theme not found in base image, skipping boot splash"
   fi

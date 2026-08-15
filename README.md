@@ -136,7 +136,7 @@ to `/tmp/livecd-build`; override with `WORK_DIR=/path sudo -E ./build.sh ...`.
 | 03 | apt install/purge per `config/*.txt` |
 | 04 | wallpaper, gschema override, plymouth watermark, `PRETTY_NAME` |
 | 05 | grub splash/font, `.disk/info`, `README.diskdefines` |
-| 06 | clean apt cache, machine-id, history; unmount chroot |
+| 06 | clean apt cache, machine-id, history; rebuild initrd; unmount chroot |
 | 07 | drop old layers, mksquashfs, sync kernel/initrd, regenerate manifest/size/install-sources.yaml/md5sum.txt |
 | 08 | rebuild hybrid BIOS+EFI ISO with xorriso (boot layout derived from the base ISO) |
 

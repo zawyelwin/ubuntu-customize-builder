@@ -16,7 +16,17 @@ if [[ -n "$GRUB_BG" ]]; then
   log "copied $(basename "$GRUB_BG") -> boot/grub/splash.png"
   if [[ -f "$EXTRACT_DIR/boot/grub/grub.cfg" ]]; then
     grep -q "background_image" "$EXTRACT_DIR/boot/grub/grub.cfg" || \
-      printf '\nbackground_image -m stretch /boot/grub/splash.png\n' >> "$EXTRACT_DIR/boot/grub/grub.cfg"
+      cat >> "$EXTRACT_DIR/boot/grub/grub.cfg" <<'EOF'
+
+if loadfont unicode; then
+  insmod all_video
+  insmod gfxterm
+  set gfxmode=auto
+  terminal_output gfxterm
+fi
+insmod png
+background_image -m stretch /boot/grub/splash.png
+EOF
   fi
 else
   warn "no grub background png found in $GRUB_SRC_DIR, skipping grub splash"

@@ -6,6 +6,9 @@ banner "Cleaning chroot"
 
 chroot "$CHROOT_DIR" /bin/bash -c "apt-get clean" || true
 
+spin "update-initramfs (this takes a while)" -- \
+  chroot "$CHROOT_DIR" /bin/bash -c "export DEBIAN_FRONTEND=noninteractive; update-initramfs -u -k all"
+
 rm -f "$CHROOT_DIR/usr/sbin/policy-rc.d"
 rm -f "$CHROOT_DIR/root/.bash_history"
 rm -f "$CHROOT_DIR/var/lib/dbus/machine-id"

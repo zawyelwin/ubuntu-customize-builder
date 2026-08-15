@@ -42,6 +42,9 @@ if [[ -n "$VMLINUZ" && -f "$LIVE_DIR/vmlinuz" ]]; then
   cp "$VMLINUZ" "$LIVE_DIR/vmlinuz"
   log "synced $(basename "$VMLINUZ") -> $(basename "$LIVE_DIR")/vmlinuz"
 fi
+if [[ -z "$INITRD" && -f "$LIVE_DIR/initrd" ]]; then
+  warn "no initrd in chroot /boot — the ISO keeps the stock initrd, which still expects the deleted squashfs layers"
+fi
 if [[ -n "$INITRD" && -f "$LIVE_DIR/initrd" ]]; then
   cp "$INITRD" "$LIVE_DIR/initrd"
   log "synced $(basename "$INITRD") -> $(basename "$LIVE_DIR")/initrd"
