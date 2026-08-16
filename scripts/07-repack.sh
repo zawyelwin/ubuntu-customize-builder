@@ -32,6 +32,7 @@ if [[ -f "$LIVE_DIR/install-sources.yaml" ]]; then
   path: filesystem.squashfs
   size: ${SIZE_BYTES}
   type: fsimage
+  variant: desktop
 EOF
   log "rewrote install-sources.yaml for the flattened image"
 fi
