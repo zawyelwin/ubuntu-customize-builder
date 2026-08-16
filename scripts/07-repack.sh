@@ -73,7 +73,8 @@ fi
 
 for cfg in "$EXTRACT_DIR/boot/grub/grub.cfg" "$EXTRACT_DIR/boot/grub/loopback.cfg"; do
   if [[ -f "$cfg" ]]; then
-    sed -i 's/ layerfs-path=[^ ]*//g' "$cfg"
+    sed -i -E 's/layerfs-path=[^[:space:]]+/layerfs-path=filesystem.squashfs/g' "$cfg"
+    sed -i -E '/^[[:space:]]*linux[[:space:]]/{/layerfs-path=/! s/[[:space:]]+---/ layerfs-path=filesystem.squashfs ---/}' "$cfg"
   fi
 done
 

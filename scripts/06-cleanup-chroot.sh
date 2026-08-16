@@ -6,8 +6,12 @@ banner "Cleaning chroot"
 
 chroot "$CHROOT_DIR" /bin/bash -c "apt-get clean" || true
 
-spin "update-initramfs (this takes a while)" -- \
-  chroot "$CHROOT_DIR" /bin/bash -c "export DEBIAN_FRONTEND=noninteractive; update-initramfs -u -k all"
+for d in "$CHROOT_DIR"/lib/modules/*/; do
+  [[ -d "$d" ]] || continue
+  KVER=$(basename "$d")
+  spin "update-initramfs $KVER (this takes a while)" -- \
+    chroot "$CHROOT_DIR" /bin/bash -c "export DEBIAN_FRONTEND=noninteractive; update-initramfs -u -k $KVER || update-initramfs -c -k $KVER"
+done
 
 rm -f "$CHROOT_DIR/usr/sbin/policy-rc.d"
 rm -f "$CHROOT_DIR/root/.bash_history"
