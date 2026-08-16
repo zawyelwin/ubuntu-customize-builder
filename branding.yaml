@@ -1,8 +1,8 @@
 # Edit these, then run ./build.sh
-distro_name: "My Custom Ubuntu"
-volid: "MYCUSTOM"             # max 32 chars, no spaces, used in xorriso -V and .disk/info
+distro_name: "Bagan Linux"
+volid: "BAGAN"                # max 32 chars, no spaces, used in xorriso -V and .disk/info
 base_iso_url: "https://releases.ubuntu.com/24.04/ubuntu-24.04.4-desktop-amd64.iso"
 base_iso_url_arm64: "https://cdimage.ubuntu.com/releases/24.04/release/ubuntu-24.04.4-desktop-arm64.iso"   # leave empty to skip the arm64 build
 default_lang: "en"
-keyboard_layouts: "us"        # comma-separated xkb layouts, first is the default
-output_name: "custom.iso"
+keyboard_layouts: "us,mm"     # comma-separated xkb layouts, first is the default
+output_name: "bagan.iso"

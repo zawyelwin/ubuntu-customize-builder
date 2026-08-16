@@ -79,4 +79,14 @@ else
   spin "unsquashfs filesystem (this takes a while)" -- unsquashfs -f -d "$CHROOT_DIR" "$SQUASHFS_PATH"
 fi
 
+mapfile -t LAYER_CONFS < <(grep -rlE '^[[:space:]]*(export[[:space:]]+)?LAYERFS_PATH=' \
+  "$CHROOT_DIR/etc/initramfs-tools/conf.d" 2>/dev/null || true)
+for f in "${LAYER_CONFS[@]}"; do
+  rm -f "$f"
+  log "dropped LAYERFS_PATH override: etc/initramfs-tools/conf.d/$(basename "$f")"
+done
+if [[ -f "$CHROOT_DIR/etc/casper.conf" ]]; then
+  sed -i -E '/^[[:space:]]*(export[[:space:]]+)?LAYERFS_PATH=/d' "$CHROOT_DIR/etc/casper.conf"
+fi
+
 log "root filesystem ready at $CHROOT_DIR"

@@ -32,6 +32,7 @@ if [[ -f "$LIVE_DIR/install-sources.yaml" ]]; then
   path: filesystem.squashfs
   size: ${SIZE_BYTES}
   type: fsimage
+  variant: desktop
 EOF
   log "rewrote install-sources.yaml for the flattened image"
 fi
@@ -41,6 +42,9 @@ INITRD=$(find "$CHROOT_DIR/boot" -maxdepth 1 -name 'initrd.img-*' | sort -V | ta
 if [[ -n "$VMLINUZ" && -f "$LIVE_DIR/vmlinuz" ]]; then
   cp "$VMLINUZ" "$LIVE_DIR/vmlinuz"
   log "synced $(basename "$VMLINUZ") -> $(basename "$LIVE_DIR")/vmlinuz"
+fi
+if [[ -z "$INITRD" && -f "$LIVE_DIR/initrd" ]]; then
+  warn "no initrd in chroot /boot — the ISO keeps the stock initrd, which still expects the deleted squashfs layers"
 fi
 if [[ -n "$INITRD" && -f "$LIVE_DIR/initrd" ]]; then
   cp "$INITRD" "$LIVE_DIR/initrd"
@@ -70,7 +74,8 @@ fi
 
 for cfg in "$EXTRACT_DIR/boot/grub/grub.cfg" "$EXTRACT_DIR/boot/grub/loopback.cfg"; do
   if [[ -f "$cfg" ]]; then
-    sed -i 's/ layerfs-path=[^ ]*//g' "$cfg"
+    sed -i -E 's/layerfs-path=[^[:space:]]+/layerfs-path=filesystem.squashfs/g' "$cfg"
+    sed -i -E '/^[[:space:]]*linux[[:space:]]/{/layerfs-path=/! s/[[:space:]]+---/ layerfs-path=filesystem.squashfs ---/}' "$cfg"
   fi
 done
 
