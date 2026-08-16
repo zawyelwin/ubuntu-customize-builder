@@ -1,6 +1,13 @@
 name: Build custom ISO
 
 on:
+  pull_request:
+    paths:
+      - "assets/**"
+      - "config/**"
+      - "branding.yaml"
+      - "scripts/**"
+      - "build.sh"
   workflow_dispatch:
 
 permissions:
